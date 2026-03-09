@@ -35,6 +35,8 @@ if [[ ! -f "${input}" ]]; then
         exit 1
 fi
 
+found=0
+
 while IFS=$'\t' read -r pmkid mac_ap mac_sta; do
 
         if [[ -z "${pmkid}" ]]; then
@@ -57,5 +59,12 @@ while IFS=$'\t' read -r pmkid mac_ap mac_sta; do
         else
                 echo "${result}"
         fi
+        found=1
 
 done < <(tshark -r "${input}" -Y "wlan_rsna_eapol.keydes.msgnr == 1" -T fields -e wlan.rsn.ie.pmkid -e wlan.sa -e wlan.da)
+
+
+if [[ "${found}" -eq 0 ]]; then
+        echo "Error: PMKID tidak ditemukan di file '${input}'."
+        exit 1
+fi
