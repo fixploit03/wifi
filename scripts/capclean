@@ -1,0 +1,39 @@
+#!/bin/bash
+#
+# capclean
+#
+# Ekstrak frame penting dari file capture untuk keperluan WPA cracking
+
+usage() {
+        echo "Penggunaan: $0 -i [input.cap] -o [output.cap]"
+        exit 0
+}
+
+while getopts "i:o:h" opt; do
+        case $opt in
+                i)
+                        input="${OPTARG}"
+                        ;;
+                o)
+                        output="${OPTARG}"
+                        ;;
+                h)
+                        usage
+                        ;;
+                *)
+                        usage
+                        ;;
+        esac
+done
+
+if [[ -z "${input}" || -z "${output}" ]]; then
+    usage
+fi
+
+if [[ ! -f "${input}" ]]; then
+        echo "Error: file '${input}' tidak ditemukan."
+        exit 1
+fi
+
+tshark -r "${input}" -R "(wlan.fc.type_subtype == 8 || eapol)" -2 -F pcap -w "${output}"
+exit 0
