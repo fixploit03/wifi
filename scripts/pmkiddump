@@ -1,0 +1,61 @@
+#!/bin/bash
+#
+# pmkiddump
+#
+# Ekstrak hash PMKID dari file capture
+
+usage() {
+	echo "Penggunaan: $0 -i [input.cap] [-o output.txt]"
+	exit 0
+}
+
+while getopts "i:o:h" opt; do
+	case $opt in
+		i)
+        		input="${OPTARG}"
+            		;;
+        	o)
+            		output="${OPTARG}"
+            		;;
+        	h)
+            		usage
+            		;;
+        	*)
+            		usage
+            		;;
+	esac
+done
+
+if [[ -z "${input}" ]]; then
+	usage
+fi
+
+if [[ ! -f "${input}" ]]; then
+	echo "Error: file '${input}' tidak ditemukan."
+	exit 1
+fi
+
+while IFS=$'\t' read -r pmkid mac_ap mac_sta; do
+
+	if [[ -z "${pmkid}" ]]; then
+		continue
+    	fi
+
+    	ssid=$(tshark -r "${input}" -Y "wlan.fc.type_subtype == 8 && wlan.bssid == ${mac_ap}" -T fields -e wlan.ssid | head -1)
+
+    	if [[ -z "${ssid}" ]]; then
+        	continue
+    	fi
+
+    	mac_ap_clean=$(echo "${mac_ap}" | tr -d ':')
+    	mac_sta_clean=$(echo "${mac_sta}" | tr -d ':')
+
+    	result="${pmkid}*${mac_ap_clean}*${mac_sta_clean}*${ssid}"
+
+    	if [[ -n "${output}" ]]; then
+        	echo "${result}" >> "${output}"
+    	else
+        	echo "${result}"
+    	fi
+
+done < <(tshark -r "${input}" -Y "wlan_rsna_eapol.keydes.msgnr == 1" -T fields -e wlan.rsn.ie.pmkid -e wlan.sa -e wlan.da)
